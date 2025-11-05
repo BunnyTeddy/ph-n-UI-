@@ -1,43 +1,40 @@
-// import 'dart:io';
-// import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class StorageService {
-  // final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Upload image file
-  Future<String?> uploadImage(String path, dynamic file) async {
+  Future<String?> uploadImage(String path, File file) async {
     try {
-      // var ref = _storage.ref().child(path);
-      // var uploadTask = await ref.putFile(file);
-      // var downloadUrl = await uploadTask.ref.getDownloadURL();
-      // return downloadUrl;
-      
-      print('Upload image to $path');
-      return 'https://placeholder-image-url.com/image.jpg';
+      var ref = _storage.ref().child(path);
+      var uploadTask = await ref.putFile(file);
+      var downloadUrl = await uploadTask.ref.getDownloadURL();
+      print('✅ Uploaded image to $path');
+      return downloadUrl;
     } catch (e) {
-      print('Error uploading image: $e');
-      return null;
+      print('❌ Error uploading image: $e');
+      rethrow;
     }
   }
 
   // Delete image
   Future<bool> deleteImage(String imageUrl) async {
     try {
-      // var ref = _storage.refFromURL(imageUrl);
-      // await ref.delete();
-      
-      print('Delete image: $imageUrl');
+      var ref = _storage.refFromURL(imageUrl);
+      await ref.delete();
+      print('✅ Deleted image: $imageUrl');
       return true;
     } catch (e) {
-      print('Error deleting image: $e');
-      return false;
+      print('❌ Error deleting image: $e');
+      rethrow;
     }
   }
 
   // Upload multiple images
   Future<List<String>> uploadMultipleImages(
     String basePath,
-    List<dynamic> files,
+    List<File> files,
   ) async {
     List<String> urls = [];
     for (var file in files) {
@@ -53,14 +50,12 @@ class StorageService {
   // Get download URL from path
   Future<String?> getDownloadUrl(String path) async {
     try {
-      // var ref = _storage.ref().child(path);
-      // return await ref.getDownloadURL();
-      
-      print('Get download URL for $path');
-      return 'https://placeholder-image-url.com/image.jpg';
+      var ref = _storage.ref().child(path);
+      var downloadUrl = await ref.getDownloadURL();
+      return downloadUrl;
     } catch (e) {
-      print('Error getting download URL: $e');
-      return null;
+      print('❌ Error getting download URL: $e');
+      rethrow;
     }
   }
 }

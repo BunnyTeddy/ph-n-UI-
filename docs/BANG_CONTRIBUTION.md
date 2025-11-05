@@ -101,6 +101,17 @@
 - [x] Delete photos with confirmation
 
 ### Sprint 6
+- [x] Kết nối Firebase services
+- [x] Uncomment tất cả Firebase code
+- [x] Tạo Firebase setup guide
+- [x] Chạy flutterfire configure thành công
+- [x] Tạo firebase_options.dart
+- [x] Đăng ký Firebase Android app
+- [x] Tích hợp Firebase vào Providers ✅
+  - [x] AuthProvider - Full Firebase Auth + Firestore
+  - [x] PlantProvider - Firestore + Storage integration
+  - [x] DiaryProvider - Firestore + Storage multi-image
+- [ ] Testing Firebase integration
 - [ ] Thiết kế trang cài đặt
 - [ ] Implement các setting options
 - [ ] Hoàn thiện UI/UX
@@ -512,6 +523,63 @@ _PRs sẽ được tạo khi hoàn thành từng sprint_
 - ✅ Grid lines và labels
 - ✅ Custom dots với stroke
 - ✅ Responsive và smooth animations
+
+---
+
+## 🔥 Firebase Integration (Sprint 6)
+
+**✅ Hoàn thành:**
+- Uncommented tất cả Firebase code trong services
+- Activated AuthService với full authentication
+- Activated FirestoreService với CRUD operations
+- Activated StorageService với image upload/delete
+- Updated FirebaseService để initialize properly
+- Tạo comprehensive setup guide (`FIREBASE_SETUP_GUIDE.md`)
+- Documentation đầy đủ về cách sử dụng mỗi service
+
+**🔧 Files đã chỉnh sửa:**
+1. ✅ `firebase_service.dart` - Initialize Firebase với firebase_options
+2. ✅ `auth_service.dart` - Full authentication (sign in/up/out, auth stream)
+3. ✅ `firestore_service.dart` - CRUD operations, queries, real-time streams
+4. ✅ `storage_service.dart` - Image upload/delete, multi-upload
+
+**📱 Firebase Services Ready:**
+- Authentication (email/password)
+- Firestore Database (CRUD + real-time)
+- Cloud Storage (image handling)
+- Auth state streams
+- Document/Collection streams
+
+**📝 Setup Complete:**
+- ✅ Chạy `flutterfire configure` - DONE
+- ✅ File `firebase_options.dart` đã được tạo
+- ✅ Firebase project: UDDD (uddd-e0e1f)
+- ✅ Android app registered: com.example.plant_care_app
+- ✅ Dependencies installed
+
+**📚 Documentation Created:**
+- ✅ `FIREBASE_INTEGRATION_GUIDE.md` - Complete integration guide
+- ✅ `FIREBASE_CHECKLIST.md` - Quick checklist
+- ✅ `FIREBASE_SETUP_GUIDE.md` - Setup instructions
+- ✅ `FIREBASE_QUICK_START.md` - Quick start
+- ✅ `FIREBASE_TEST_GUIDE.md` - Testing guide
+
+**📝 Integration Complete:**
+- ✅ **Phase 1:** Enable Firebase services (Auth, Firestore, Storage) - DONE
+- ✅ **Phase 2:** Apply Security Rules - DONE
+- ✅ **Phase 3:** Integrate AuthProvider với Firebase - DONE
+- ✅ **Phase 4:** Integrate PlantProvider với Firestore + Storage - DONE
+- ✅ **Phase 5:** Integrate DiaryProvider với Firestore + Storage - DONE
+- ⚠️ **Phase 6:** Full testing - IN PROGRESS
+
+**📝 Next Steps:**
+- Test authentication flow (register, login, logout)
+- Test plant CRUD operations
+- Test diary CRUD operations  
+- Test image upload/delete
+- Verify data trong Firebase Console
+- Bug fixes if needed
+- Config iOS platform (optional)
 
 
 

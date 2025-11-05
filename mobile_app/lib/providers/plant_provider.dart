@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/plant_model.dart';
-import '../services/api/plant_api_service.dart';
+import '../services/firebase/firestore_service.dart';
+import '../services/firebase/storage_service.dart';
 
 class PlantProvider with ChangeNotifier {
-  final PlantApiService _plantApiService = PlantApiService();
+  final FirestoreService _firestore = FirestoreService();
+  final StorageService _storage = StorageService();
   
   List<PlantModel> _plants = [];
   PlantModel? _selectedPlant;
@@ -55,96 +58,156 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Load plants for a user
+  // Load plants from Firestore
   Future<void> loadPlants(String userId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
 
-      _plants = await _plantApiService.getPlantsByUserId(userId);
-      
-      _isLoading = false;
-      notifyListeners();
+    try {
+      final data = await _firestore.queryCollection('plants', 'userId', userId);
+      _plants = data.map((plantData) => PlantModel.fromMap(plantData)).toList();
+      _plants.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Sort by newest
+      _error = null;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Lỗi tải danh sách cây: $e';
+      print('Error loading plants: $e');
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Add new plant
-  Future<bool> addPlant(PlantModel plant) async {
+  // Get single plant by ID
+  PlantModel? getPlantById(String plantId) {
     try {
-      _isLoading = true;
-      notifyListeners();
+      return _plants.firstWhere((plant) => plant.id == plantId);
+    } catch (e) {
+      return null;
+    }
+  }
 
-      var plantId = await _plantApiService.addPlant(plant);
+  // Add plant with image upload
+  Future<bool> addPlant(PlantModel plant, {File? imageFile}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      String? imageUrl;
       
-      if (plantId != null) {
-        _plants.add(plant.copyWith(id: plantId));
+      // Upload image first if provided
+      if (imageFile != null) {
+        final path = 'plants/${plant.userId}/${plant.id}/profile.jpg';
+        imageUrl = await _storage.uploadImage(path, imageFile);
       }
       
-      _isLoading = false;
-      notifyListeners();
+      // Save plant to Firestore
+      final plantData = plant.toMap();
+      if (imageUrl != null) {
+        plantData['imageUrl'] = imageUrl;
+      }
+      plantData['createdAt'] = DateTime.now().toIso8601String();
       
-      return plantId != null;
+      await _firestore.addDocument('plants', plantData);
+      
+      // Reload plants
+      await loadPlants(plant.userId);
+      
+      _error = null;
+      return true;
     } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
+      _error = 'Lỗi thêm cây: $e';
+      print('Error adding plant: $e');
       notifyListeners();
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   // Update plant
-  Future<bool> updatePlant(String plantId, PlantModel plant) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
+  Future<bool> updatePlant(String plantId, PlantModel plant, {File? newImageFile}) async {
+    _isLoading = true;
+    notifyListeners();
 
-      var success = await _plantApiService.updatePlant(plantId, plant);
+    try {
+      String? imageUrl = plant.imageUrl;
       
-      if (success) {
-        var index = _plants.indexWhere((p) => p.id == plantId);
-        if (index != -1) {
-          _plants[index] = plant;
+      // Upload new image if provided
+      if (newImageFile != null) {
+        // Delete old image if exists
+        if (plant.imageUrl != null && plant.imageUrl!.isNotEmpty) {
+          try {
+            await _storage.deleteImage(plant.imageUrl!);
+          } catch (e) {
+            print('Error deleting old image: $e');
+          }
         }
+        
+        // Upload new image
+        final path = 'plants/${plant.userId}/$plantId/profile.jpg';
+        imageUrl = await _storage.uploadImage(path, newImageFile);
       }
       
-      _isLoading = false;
-      notifyListeners();
+      // Update plant in Firestore
+      final plantData = plant.toMap();
+      plantData['imageUrl'] = imageUrl;
+      plantData['updatedAt'] = DateTime.now().toIso8601String();
       
-      return success;
+      await _firestore.updateDocument('plants', plantId, plantData);
+      
+      // Reload plants
+      await loadPlants(plant.userId);
+      
+      _error = null;
+      return true;
     } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
+      _error = 'Lỗi cập nhật cây: $e';
+      print('Error updating plant: $e');
       notifyListeners();
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   // Delete plant
-  Future<bool> deletePlant(String plantId) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
+  Future<bool> deletePlant(String plantId, String userId) async {
+    _isLoading = true;
+    notifyListeners();
 
-      var success = await _plantApiService.deletePlant(plantId);
+    try {
+      final plant = getPlantById(plantId);
       
-      if (success) {
-        _plants.removeWhere((p) => p.id == plantId);
+      // Delete image from Storage
+      if (plant?.imageUrl != null && plant!.imageUrl!.isNotEmpty) {
+        try {
+          await _storage.deleteImage(plant.imageUrl!);
+        } catch (e) {
+          print('Error deleting plant image: $e');
+        }
       }
       
-      _isLoading = false;
-      notifyListeners();
+      // Delete plant from Firestore
+      await _firestore.deleteDocument('plants', plantId);
       
-      return success;
+      // TODO: Also delete related diary entries (cascade delete)
+      
+      // Reload plants
+      await loadPlants(userId);
+      
+      _error = null;
+      return true;
     } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
+      _error = 'Lỗi xóa cây: $e';
+      print('Error deleting plant: $e');
       notifyListeners();
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -154,14 +217,16 @@ class PlantProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Search plants
-  Future<List<PlantModel>> searchPlants(String userId, String query) async {
-    try {
-      return await _plantApiService.searchPlants(userId, query);
-    } catch (e) {
-      _error = e.toString();
-      return [];
-    }
+  // Search plants (local search)
+  List<PlantModel> searchPlants(String query) {
+    if (query.isEmpty) return _plants;
+    
+    query = query.toLowerCase();
+    return _plants.where((plant) {
+      return plant.name.toLowerCase().contains(query) ||
+             (plant.species?.toLowerCase().contains(query) ?? false) ||
+             (plant.description?.toLowerCase().contains(query) ?? false);
+    }).toList();
   }
 
   // Clear error

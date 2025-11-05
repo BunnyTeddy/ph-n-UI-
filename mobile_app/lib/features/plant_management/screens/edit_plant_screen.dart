@@ -155,7 +155,7 @@ class _EditPlantScreenState extends State<EditPlantScreen> {
     if (confirmed == true && mounted) {
       setState(() => _isLoading = true);
       
-      final success = await context.read<PlantProvider>().deletePlant(widget.plantId);
+      final success = await context.read<PlantProvider>().deletePlant(widget.plantId, _plant!.userId);
       
       if (mounted) {
         if (success) {

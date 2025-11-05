@@ -46,6 +46,8 @@ firmware/test/README
 # Sensitive files
 firmware/src/config/wifi_config.h
 !firmware/src/config/wifi_config.h.example
+firmware/src/config/firebase_config.h
+!firmware/src/config/firebase_config.h.example
 
 
 

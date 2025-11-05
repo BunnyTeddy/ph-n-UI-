@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/iot_provider.dart';
+import '../../../providers/notification_provider.dart'; // ✅ Thêm import
+import '../../../core/routes/app_routes.dart'; // ✅ Thêm import
 
 /// Plant Detail with IoT Screen - Assigned to: Nguyễn Anh Tiến
 /// Task 3.4: Trang Chi tiết cây & Hiển thị dữ liệu IoT
 /// Task 3.5: Tích hợp chức năng Điều khiển tưới nước
+/// ✅ INTEGRATED: Sensor listening (Hoàng's task)
 class PlantDetailIotScreen extends StatefulWidget {
   final String plantId;
 
@@ -19,10 +22,24 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
   void initState() {
     super.initState();
     _loadIotData();
+    
+    // ✅ Bắt đầu lắng nghe sensor cho cây này (Hoàng's feature)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationProvider>(context, listen: false)
+          .startSensorListening(plantId: widget.plantId);
+    });
   }
 
   void _loadIotData() {
-    context.read<IotProvider>().loadSensorData(widget.plantId);
+    context.read<IotProvider>().initialize();
+  }
+
+  @override
+  void dispose() {
+    // ✅ Dừng lắng nghe khi rời khỏi màn hình
+    Provider.of<NotificationProvider>(context, listen: false)
+        .stopSensorListening();
+    super.dispose();
   }
 
   @override
@@ -31,6 +48,18 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
       appBar: AppBar(
         title: const Text('Chi tiết cây & IoT'),
         actions: [
+          // ✅ Thêm button xem thống kê (Hoàng's feature)
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Xem thống kê',
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                AppRoutes.statistics,
+                arguments: widget.plantId,
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.photo_library),
             onPressed: () {
@@ -88,7 +117,7 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
               const SizedBox(height: 12),
               Consumer<IotProvider>(
                 builder: (context, iotProvider, _) {
-                  final latestData = iotProvider.latestData;
+                  final latestData = iotProvider.latestSensorData;
                   
                   return Row(
                     children: [
@@ -103,7 +132,7 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
                                 const Icon(Icons.thermostat, size: 40, color: Colors.orange),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${latestData?.temperature.toStringAsFixed(1) ?? '--'}°C',
+                                  '${latestData != null ? (latestData['temperature'] ?? 0.0).toStringAsFixed(1) : '--'}°C',
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
@@ -128,7 +157,7 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
                                 const Icon(Icons.water_drop, size: 40, color: Colors.blue),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${latestData?.soilMoisture.toStringAsFixed(0) ?? '--'}%',
+                                  '${latestData != null ? (latestData['soilMoisture'] ?? 0).toString() : '--'}',
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
@@ -166,7 +195,7 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
                                 child: ElevatedButton.icon(
                                   onPressed: iotProvider.pumpState
                                       ? null
-                                      : () => iotProvider.controlPump(widget.plantId, true),
+                                      : () => iotProvider.controlPump(true),
                                   icon: const Icon(Icons.water),
                                   label: const Text('Bật máy bơm'),
                                   style: ElevatedButton.styleFrom(
@@ -179,7 +208,7 @@ class _PlantDetailIotScreenState extends State<PlantDetailIotScreen> {
                                 child: ElevatedButton.icon(
                                   onPressed: !iotProvider.pumpState
                                       ? null
-                                      : () => iotProvider.controlPump(widget.plantId, false),
+                                      : () => iotProvider.controlPump(false),
                                   icon: const Icon(Icons.stop),
                                   label: const Text('Tắt máy bơm'),
                                   style: ElevatedButton.styleFrom(

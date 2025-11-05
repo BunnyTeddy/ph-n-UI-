@@ -299,6 +299,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: QuickActionButton(
+                  label: 'IoT',
+                  icon: Icons.sensors,
+                  color: Colors.green,
+                  onTap: () {
+                    Navigator.pushNamed(context, AppRoutes.iotHome);
+                  },
+                ),
+              ),
             ],
           ),
         ],
@@ -330,7 +341,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await context.read<PlantProvider>().deletePlant(plantId);
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.currentUser?.id ?? '';
+      final success = await context.read<PlantProvider>().deletePlant(plantId, userId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

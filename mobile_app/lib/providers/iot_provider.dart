@@ -1,116 +1,181 @@
 import 'package:flutter/material.dart';
-import '../models/sensor_data_model.dart';
+import 'package:firebase_database/firebase_database.dart';
 
+/// IoT Provider for managing real-time sensor data and device controls
+/// Uses Firebase Realtime Database for IoT communication
 class IotProvider with ChangeNotifier {
-  List<SensorDataModel> _sensorData = [];
-  SensorDataModel? _latestData;
-  bool _pumpState = false;
+  final DatabaseReference _sensorRef = FirebaseDatabase.instance.ref("sensorData");
+  final DatabaseReference _controlRef = FirebaseDatabase.instance.ref("controls");
+  
+  Map<String, dynamic>? _latestSensorData;
+  Map<String, dynamic> _controlStates = {
+    'fan': false,
+    'pump': false,
+    'light': false,
+    'autoMode': true,
+  };
+  
   bool _isLoading = false;
   String? _error;
-
-  List<SensorDataModel> get sensorData => _sensorData;
-  SensorDataModel? get latestData => _latestData;
-  bool get pumpState => _pumpState;
+  
+  // Getters
+  Map<String, dynamic>? get latestSensorData => _latestSensorData;
+  Map<String, dynamic> get controlStates => _controlStates;
   bool get isLoading => _isLoading;
   String? get error => _error;
-
-  // Load sensor data for a plant
-  Future<void> loadSensorData(String plantId) async {
+  
+  bool get fanState => _controlStates['fan'] ?? false;
+  bool get pumpState => _controlStates['pump'] ?? false;
+  bool get lightState => _controlStates['light'] ?? false;
+  bool get autoMode => _controlStates['autoMode'] ?? true;
+  
+  /// Initialize listeners for real-time data
+  void initialize() {
+    _listenToSensorData();
+    _listenToControls();
+  }
+  
+  /// Listen to sensor data updates
+  void _listenToSensorData() {
+    _sensorRef.onValue.listen((DatabaseEvent event) {
+      if (event.snapshot.value != null) {
+        try {
+          Map<dynamic, dynamic> allData = event.snapshot.value as Map<dynamic, dynamic>;
+          // Get the latest sensor reading
+          var lastKey = allData.keys.last;
+          _latestSensorData = Map<String, dynamic>.from(allData[lastKey]);
+          notifyListeners();
+        } catch (e) {
+          _error = 'Error parsing sensor data: $e';
+          notifyListeners();
+        }
+      }
+    }, onError: (error) {
+      _error = 'Error listening to sensor data: $error';
+      notifyListeners();
+    });
+  }
+  
+  /// Listen to control state updates
+  void _listenToControls() {
+    _controlRef.onValue.listen((DatabaseEvent event) {
+      if (event.snapshot.value != null) {
+        try {
+          Map<dynamic, dynamic> data = event.snapshot.value as Map<dynamic, dynamic>;
+          _controlStates = {
+            'fan': data['fan'] ?? false,
+            'pump': data['pump'] ?? false,
+            'light': data['light'] ?? false,
+            'autoMode': data['autoMode'] ?? true,
+          };
+          notifyListeners();
+        } catch (e) {
+          _error = 'Error parsing control data: $e';
+          notifyListeners();
+        }
+      }
+    }, onError: (error) {
+      _error = 'Error listening to controls: $error';
+      notifyListeners();
+    });
+  }
+  
+  /// Set a control device state
+  Future<bool> setControl(String device, bool value) async {
     try {
       _isLoading = true;
-      _error = null;
       notifyListeners();
-
-      // TODO: Implement Firestore real-time listener
-      // Stream for iot_data/{plantId}/sensor_readings
-      _sensorData = [];
+      
+      await _controlRef.child(device).set(value);
       
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Get latest sensor reading
-  void updateLatestData(SensorDataModel data) {
-    _latestData = data;
-    _sensorData.insert(0, data);
-    
-    // Keep only last 100 readings
-    if (_sensorData.length > 100) {
-      _sensorData = _sensorData.take(100).toList();
-    }
-    
-    notifyListeners();
-  }
-
-  // Control pump (turn on/off)
-  Future<bool> controlPump(String plantId, bool state) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      // TODO: Write to Firebase iot_data/{plantId}/control/pumpState
-      // ESP32 will listen to this field and control relay
-      
-      _pumpState = state;
-      
-      _isLoading = false;
-      notifyListeners();
-      
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = 'Error setting control: $e';
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
-
-  // Auto water based on moisture level
-  Future<bool> autoWater(String plantId) async {
-    if (_latestData != null && _latestData!.isMoistureLow) {
-      return await controlPump(plantId, true);
+  
+  /// Update multiple controls at once
+  Future<bool> updateControls(Map<String, dynamic> updates) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      
+      await _controlRef.update(updates);
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Error updating controls: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
-    return false;
   }
-
-  // Get sensor data for specific time range
-  List<SensorDataModel> getDataInRange(DateTime start, DateTime end) {
-    return _sensorData
-        .where((data) =>
-            data.timestamp.isAfter(start) && data.timestamp.isBefore(end))
-        .toList();
+  
+  /// Control fan
+  Future<bool> controlFan(bool state) async {
+    return await setControl('fan', state);
   }
-
-  // Get average temperature
-  double? getAverageTemperature() {
-    if (_sensorData.isEmpty) return null;
-    var sum = _sensorData.fold<double>(0, (sum, data) => sum + data.temperature);
-    return sum / _sensorData.length;
+  
+  /// Control pump
+  Future<bool> controlPump(bool state) async {
+    return await setControl('pump', state);
   }
-
-  // Get average moisture
-  double? getAverageMoisture() {
-    if (_sensorData.isEmpty) return null;
-    var sum = _sensorData.fold<double>(0, (sum, data) => sum + data.soilMoisture);
-    return sum / _sensorData.length;
+  
+  /// Control light
+  Future<bool> controlLight(bool state) async {
+    return await setControl('light', state);
   }
-
-  // Clear error
+  
+  /// Set auto mode
+  Future<bool> setAutoMode(bool state) async {
+    return await setControl('autoMode', state);
+  }
+  
+  /// Get sensor value by key
+  double? getSensorValue(String key) {
+    if (_latestSensorData == null) return null;
+    var value = _latestSensorData![key];
+    if (value == null) return null;
+    return (value is int) ? value.toDouble() : value as double?;
+  }
+  
+  /// Get temperature
+  double? get temperature => getSensorValue('temperature');
+  
+  /// Get humidity
+  double? get humidity => getSensorValue('humidity');
+  
+  /// Get soil moisture
+  int? get soilMoisture {
+    if (_latestSensorData == null) return null;
+    return _latestSensorData!['soilMoisture'] as int?;
+  }
+  
+  /// Get light level
+  double? get lightLevel => getSensorValue('lightLevel');
+  
+  /// Get CO2 level
+  int? get co2Level {
+    if (_latestSensorData == null) return null;
+    return _latestSensorData!['co2Level'] as int?;
+  }
+  
+  /// Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
+  
+  @override
+  void dispose() {
+    // Firebase listeners are automatically cleaned up
+    super.dispose();
+  }
 }
-
-
-
-
-
-
-
-

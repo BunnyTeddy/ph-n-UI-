@@ -1,0 +1,12 @@
+#ifndef FIREBASE_CONFIG_H
+#define FIREBASE_CONFIG_H
+
+// Firebase Realtime Database Configuration
+// Copy this file to firebase_config.h and fill in your actual credentials
+// DO NOT commit firebase_config.h to git!
+
+const char* FIREBASE_URL = "https://your-project-id-default-rtdb.firebaseio.com";
+const char* FIREBASE_SECRET = "your-firebase-database-secret-here";
+
+#endif
+

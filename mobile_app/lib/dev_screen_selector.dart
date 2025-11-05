@@ -10,7 +10,10 @@ import 'features/diary/screens/add_diary_screen.dart';
 import 'features/gallery/screens/gallery_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/statistics/screens/statistics_screen.dart';
+import 'features/iot/screens/iot_home_screen.dart';
+import 'features/iot/screens/plant_detail_iot_screen.dart';
 import 'providers/plant_provider.dart';
+import 'providers/iot_provider.dart';
 
 /// Development Screen Selector
 /// Màn hình này cho phép xem tất cả các screens mà không cần Firebase
@@ -33,6 +36,7 @@ class _DevScreenSelectorState extends State<DevScreenSelector> {
     // Load mock data when entering dev mode
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PlantProvider>().loadMockData();
+      context.read<IotProvider>().initialize();
     });
   }
 
@@ -168,11 +172,37 @@ class _DevScreenSelectorState extends State<DevScreenSelector> {
               onTap: () => _navigateTo(context, const SettingsScreen()),
             ),
             _ScreenTile(
-              title: 'Statistics Screen',
-              subtitle: 'Thống kê & báo cáo',
+              title: 'Statistics Screen 📊 (Hoàng)',
+              subtitle: 'Thống kê & báo cáo với biểu đồ',
               icon: Icons.bar_chart,
               color: Colors.indigo,
-              onTap: () => _navigateTo(context, const StatisticsScreen()),
+              onTap: () => _navigateTo(
+                context,
+                const StatisticsScreen(plantId: _DevScreenSelectorState.mockPlantId), // ✅ FIX: Truyền plantId
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // IoT Screens (Tiến's work)
+          _buildSection('🤖 IoT - Smart Greenhouse (Sprint 7)', [
+            _ScreenTile(
+              title: 'IoT Home Screen',
+              subtitle: 'Smart Greenhouse Control Panel',
+              icon: Icons.sensors,
+              color: Colors.green,
+              onTap: () => _navigateTo(context, const IotHomeScreen()),
+            ),
+            _ScreenTile(
+              title: 'Plant Detail IoT Screen',
+              subtitle: 'Chi tiết cây với IoT data',
+              icon: Icons.eco,
+              color: Colors.lightGreen,
+              onTap: () => _navigateTo(
+                context,
+                const PlantDetailIotScreen(plantId: _DevScreenSelectorState.mockPlantId),
+              ),
             ),
           ]),
 

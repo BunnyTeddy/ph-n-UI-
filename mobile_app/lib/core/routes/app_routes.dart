@@ -9,6 +9,7 @@ import '../../features/diary/screens/add_diary_screen.dart';
 import '../../features/gallery/screens/gallery_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/iot/screens/plant_detail_iot_screen.dart';
+import '../../features/iot/screens/iot_home_screen.dart';
 import '../../features/statistics/screens/statistics_screen.dart';
 import '../../dev_screen_selector.dart';
 
@@ -36,6 +37,7 @@ class AppRoutes {
   
   // IoT Routes
   static const String plantDetailIot = '/plant-detail-iot';
+  static const String iotHome = '/iot-home';
   
   // Statistics Routes
   static const String statistics = '/statistics';
@@ -93,10 +95,25 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => PlantDetailIotScreen(plantId: plantId),
         );
+      case iotHome:
+        return MaterialPageRoute(builder: (_) => const IotHomeScreen());
       
       // Statistics
       case statistics:
-        return MaterialPageRoute(builder: (_) => const StatisticsScreen());
+        final plantId = settings.arguments as String?;
+        if (plantId == null) {
+          return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: const Text('Lỗi')),
+              body: const Center(
+                child: Text('Cần chọn cây trước khi xem thống kê!'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => StatisticsScreen(plantId: plantId),  // ✅ Truyền plantId
+        );
       
       // Settings
       case AppRoutes.settings:

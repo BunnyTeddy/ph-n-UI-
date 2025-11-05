@@ -212,7 +212,7 @@ class _DiaryListScreenState extends State<DiaryListScreen> {
     );
 
     if (confirmed == true && mounted) {
-      final success = await context.read<DiaryProvider>().deleteEntry(entryId);
+      final success = await context.read<DiaryProvider>().deleteEntry(entryId, widget.plantId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -3,9 +3,26 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_routes.dart';
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart'; // ✅ Thêm import
 
-class PlantCareApp extends StatelessWidget {
+class PlantCareApp extends StatefulWidget {  // ✅ Đổi thành StatefulWidget
   const PlantCareApp({super.key});
+
+  @override
+  State<PlantCareApp> createState() => _PlantCareAppState();
+}
+
+class _PlantCareAppState extends State<PlantCareApp> {
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Khởi tạo NotificationProvider sau khi build xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notificationProvider = 
+          Provider.of<NotificationProvider>(context, listen: false);
+      notificationProvider.initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
